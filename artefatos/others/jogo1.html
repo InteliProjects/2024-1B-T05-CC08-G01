@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en-US">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Canvas tutorial</title>
+</head>
+
+<body>
+    <canvas id="tutorial" width="500" height="500"></canvas>
+    <p id="mensagem"></p>
+    <div style="display: none" id="imagens"></div>
+    <audio id="audio" autoplay controls style="display: none;">
+        <source src="som.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+    </audio>
+    <script>
+        const listaDeObjetos = [];
+        let ultimaPos = 0;
+        const largura = 500;
+        const altura = 500;
+        const figurasValidas = ["quadrado", "circulo"];
+        const canvas = document.getElementById("tutorial");
+        const divImagens = document.getElementById("imagens");
+        let ultimaTecla = -1;
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mousedown', handleMouseDown);
+
+        async function esperar(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function inicializarComCor(cor) {
+            canvas.style.borderWidth = "1px";
+            canvas.style.borderStyle = "solid";
+            canvas.style.borderColor = "grey";
+            canvas.style.backgroundColor = cor;
+        }
+
+        function limparTela() {
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, largura, altura);
+        }
+
+        function desenharFigura(tipo, cor, x, y, tamanho) {
+            const ctx = canvas.getContext("2d");
+            if (tipo == "quadrado") {
+                ctx.fillStyle = cor;
+                ctx.fillRect(x, y, tamanho, tamanho);
+            } else if (tipo == "circulo") {
+                ctx.beginPath();
+                ctx.fillStyle = cor;
+                ctx.arc(x, y, tamanho, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        function criarFigura(tipo, cor, x, y, tamanho) {
+            if (figurasValidas.indexOf(tipo) >= 0) {
+                listaDeObjetos[ultimaPos] = { "tipo": tipo, "cor": cor, "x": x, "y": y, "tamanho": tamanho }
+                desenharFigura(tipo, cor, x, y, tamanho);
+                ultimaPos++;
+                return ultimaPos - 1;
+            } else
+                return -1;
+        }
+
+        function redesenharTodosComExcecao(idExcecao) {
+            for (let i = 0; i < listaDeObjetos.length; i++) {
+                if (i != idExcecao) {
+                    const obj = listaDeObjetos[i];
+                    if (obj.tipo == "imagem")
+                        desenharImagem(obj.x, obj.y, obj.url);
+                    else // então é figura
+                        desenharFigura(obj.tipo, obj.cor, obj.x, obj.y, obj.tamanho);
+                }
+            }
+        }
+
+        function desenharImagem(x, y, url) {
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(divImagens.querySelector("img[src='" + url + "']"), x, y);
+        }
+
+        function criarImagem(url, x, y) {
+            const img = document.createElement("img");
+            img.src = url;
+            divImagens.appendChild(img);
+            listaDeObjetos[ultimaPos] = { "tipo": "imagem", "x": x, "y": y, "url": url }
+
+            // precisa aguardar um pouco para que a figura de fato esteja na div
+            async function aguardaParaExibir() {
+                await esperar(50);
+                desenharImagem(x, y, url);
+            };
+            aguardaParaExibir();
+
+            ultimaPos++;
+            return ultimaPos - 1;
+        }
+
+        function mover(id, dx, dy) {
+            if (listaDeObjetos[id] != null) {
+                obj = listaDeObjetos[id];
+                limparTela();
+                obj.x += dx;
+                obj.y += dy;
+                if (obj.tipo == "imagem")
+                    desenharImagem(obj.x, obj.y, obj.url)
+                else
+                    desenharFigura(obj.tipo, obj.cor, obj.x, obj.y, obj.tamanho);
+                redesenharTodosComExcecao(id);
+            }
+        }
+
+        function colidiu(id1, id2) {
+            if (id1 >= 0 && id2 >= 0 && id1 < listaDeObjetos.length && id2 < listaDeObjetos.length) {
+                obj1 = listaDeObjetos[id1];
+                obj2 = listaDeObjetos[id2];
+                let w1;
+                let w2;
+                let h1;
+                let h2;
+
+                if (obj1.tipo == "imagem") {
+                    w1 = divImagens.querySelector("img[src='" + obj1.url + "']").width;
+                    h1 = divImagens.querySelector("img[src='" + obj1.url + "']").height;
+                } else {
+                    w1 = obj.tamanho;
+                    h1 = obj.tamanho;
+                }
+
+                if (obj2.tipo == "imagem") {
+                    w2 = divImagens.querySelector("img[src='" + obj2.url + "']").width;
+                    h2 = divImagens.querySelector("img[src='" + obj2.url + "']").height;
+                } else {
+                    w2 = obj.tamanho;
+                    h2 = obj.tamanho;
+                }
+
+                if (obj1.x < obj2.x + w2 &&
+                    obj1.x + w1 > obj2.x &&
+                    obj1.y < obj2.y + h2 &&
+                    obj1.y + h1 > obj2.y)
+                    return true;
+            }
+            return false;
+        }
+
+        function mostrar(msg) {
+            document.getElementById("mensagem").textContent = msg;
+        }
+
+        function lerNumero(msg) {
+            let num;
+            do {
+                num = Number(prompt(msg));
+            } while (isNaN(num) || num % 1 !== 0);
+            return num;
+        }
+
+        function lerBinario(msg) {
+            let resposta = '';
+            do {
+                resposta = prompt(msg).toLowerCase();
+            } while (resposta !== 'v' && resposta !== 'f');
+            return resposta;
+        }
+
+        function ler(keyCode) {
+            switch (keyCode) {
+                case 38:
+                    return 1; // Seta para cima
+                case 40:
+                    return 2; // Seta para baixo
+                case 37:
+                    return 3; // Seta para esquerda
+                case 39:
+                    return 4; // Seta para direita
+                case 32:
+                    return 5; // Espaço
+                case 13:
+                    return 6; // Enter
+                case 36:
+                    return 7; // Botão esquerdo do mouse
+                case 35:
+                    return 8; // Botão direito do mouse
+                case 46:
+                    return 9; // Mouse para cima
+                case 45:
+                    return 10; // Mouse para baixo
+                case 33:
+                    return 11; // Mouse para esquerda
+                case 34:
+                    return 12; // Mouse para direita
+                default:
+                    return 0; // Outros casos
+            }
+        }
+
+        function handleKeyDown(evento) {
+            ultimaTecla = ler(evento.keyCode);
+        }
+
+        function handleMouseMove(evento) {
+            ultimaTecla = lerMouse(evento);
+        }
+
+        function handleMouseDown(evento) {
+            ultimaTecla = lerMouse(evento);
+        }
+
+        function lerMouse(evento) {
+            let codigo = 0;
+            if (evento.buttons === 1) codigo = 7; // Botão esquerdo do mouse
+            if (evento.buttons === 2) codigo = 8; // Botão direito do mouse
+            if (evento.buttons === 4) codigo = 9; // Mouse para cima
+            if (evento.buttons === 8) codigo = 10; // Mouse para baixo
+            if (evento.buttons === 16) codigo = 11; // Mouse para esquerda
+            if (evento.buttons === 32) codigo = 12; // Mouse para direita
+            return codigo;
+        }
+
+        function consultar() {
+            let valor = ultimaTecla;
+            ultimaTecla = -1;
+            return valor;
+        }
+
+        function aleatorio(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function inicializarComImagem(arq) {
+            const imgElement = document.createElement('img');
+            imgElement.src = arq;
+            document.body.appendChild(imgElement);
+            const ctx = canvas.getContext('2d');
+
+            imgElement.onload = () => {
+                const scale = Math.min(largura / imgElement.width, altura / imgElement.height);
+                imgElement.style.transformOrigin = 'top left';
+                imgElement.style.transform = 'scale(' + scale + ')';
+                ctx.drawImage(imgElement, 0, 0, imgElement.width * scale, imgElement.height * scale);
+            };
+
+        }
+
+        function desenharTexto(texto, x, y, cor) {
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = cor;
+            ctx.font = "20px Arial";
+            ctx.fillText(texto, x, y);
+        }
+        async function main() {
+    let jogador, bloco1, bloco2, bloco3, contador, posicao_jogador, posicao_bloco1, posicao_bloco2, posicao_bloco3, bloco_lancado;
+    let jogo_ativo, posicao_bloco_lancado;
+    let lerT;
+    let velocidade_bloco1, velocidade_bloco2, velocidade_bloco3;
+    let descendo_bloco1, descendo_bloco2, descendo_bloco3;
+
+    // Inicialização das variáveis
+    inicializarComCor("cinza");
+    jogador = criarFigura("quadrado", "vermelho", 200, 350, 30);
+    bloco1 = criarFigura("quadrado", "verde", 100, -50, 30);
+    bloco2 = criarFigura("quadrado", "azul", 250, -50, 30);
+    bloco3 = criarFigura("quadrado", "amarelo", 400, -50, 30);
+    contador = 0;
+    velocidade_bloco1 = 0.2;
+    velocidade_bloco2 = 0.2;
+    velocidade_bloco3 = 0.2;
+    posicao_jogador = 200;
+    posicao_bloco1 = -50;
+    posicao_bloco2 = -50;
+    posicao_bloco3 = -50;
+    posicao_bloco_lancado = -50;
+    bloco_lancado = -50;
+    jogo_ativo = true;
+    descendo_bloco1 = false;
+    descendo_bloco2 = false;
+    descendo_bloco3 = false;
+
+    mostrar("Instruções: Pressione 'espaço' para lançar um bloco.");
+    mostrar("Use 'a' e 'd' para mover o jogador.");
+
+    while (jogo_ativo) {
+        await esperar(10);
+
+        // Verificar se os blocos atingiram o chão
+        if (posicao_bloco1 >= 400) {
+            mostrar("Fim do Jogo! Bloco verde atingiu o chão.");
+            jogo_ativo = false;
+        }
+        if (posicao_bloco2 >= 400) {
+            mostrar("Fim do Jogo! Bloco azul atingiu o chão.");
+            jogo_ativo = false;
+        }
+        if (posicao_bloco3 >= 400) {
+            mostrar("Fim do Jogo! Bloco amarelo atingiu o chão.");
+            jogo_ativo = false;
+        }
+
+        // Randomly start blocks to descend
+        if (!descendo_bloco1 && Math.random() < 0.01) {
+            descendo_bloco1 = true;
+        }
+        if (!descendo_bloco2 && Math.random() < 0.01) {
+            descendo_bloco2 = true;
+        }
+        if (!descendo_bloco3 && Math.random() < 0.01) {
+            descendo_bloco3 = true;
+        }
+
+        lerT = consultar();
+        if (lerT == 5) {
+            if (bloco_lancado <= -50) {
+                bloco_lancado = criarFigura("quadrado", "cinza", posicao_jogador, 350, 20);
+                posicao_bloco_lancado = 350; // Inicializando a posição do bloco lançado
+            }
+        }
+
+        if (lerT == 3) {
+            posicao_jogador -= 10;
+            mover(jogador, -10, 0);
+        }
+        if (lerT == 4) {
+            posicao_jogador += 10;
+            mover(jogador, 10, 0);
+        }
+
+        if (bloco_lancado > -50) {
+            mover(bloco_lancado, 0, -1); // Movendo o bloco lançado para cima
+            posicao_bloco_lancado -= 1;
+            let c1 = colidiu(bloco_lancado, bloco1);
+            let c2 = colidiu(bloco_lancado, bloco2);
+            let c3 = colidiu(bloco_lancado, bloco3);
+            if (c1 || c2 || c3) {
+                if (c1) velocidade_bloco1 = 0; // Parar o bloco 1
+                if (c2) velocidade_bloco2 = 0; // Parar o bloco 2
+                if (c3) velocidade_bloco3 = 0; // Parar o bloco 3
+                bloco_lancado = -50; // Remover o bloco lançado ao colidir
+            }
+        }
+
+        if (posicao_jogador < 0) {
+            posicao_jogador = 0;
+            mover(jogador, 10, 0); // Corrigindo a posição do jogador
+        }
+        if (posicao_jogador > 400) {
+            posicao_jogador = 400;
+            mover(jogador, -10, 0); // Corrigindo a posição do jogador
+        }
+
+        contador += 1;
+        if (contador >= 10000) {
+            if (velocidade_bloco1 > 0) velocidade_bloco1 += 1;
+            if (velocidade_bloco2 > 0) velocidade_bloco2 += 1;
+            if (velocidade_bloco3 > 0) velocidade_bloco3 += 1;
+            contador = 0;
+        }
+
+        // Mover blocos se não estiverem parados e foram iniciados
+        if (velocidade_bloco1 > 0 && descendo_bloco1) {
+            mover(bloco1, 0, velocidade_bloco1);
+            posicao_bloco1 += velocidade_bloco1;
+        }
+        if (velocidade_bloco2 > 0 && descendo_bloco2) {
+            mover(bloco2, 0, velocidade_bloco2);
+            posicao_bloco2 += velocidade_bloco2;
+        }
+        if (velocidade_bloco3 > 0 && descendo_bloco3) {
+            mover(bloco3, 0, velocidade_bloco3);
+            posicao_bloco3 += velocidade_bloco3;
+        }
+    }
+}
+
+main();
+
+    </script>
+</body>
+
+</html>

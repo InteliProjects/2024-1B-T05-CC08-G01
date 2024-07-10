@@ -1,0 +1,77 @@
+programa "gameCar"
+
+var 
+    numero r1,r2,r3,r4,r5,r6,i,delta,startX,startY,setWhile;
+    binario c,sair, isMoving;
+{
+    r1: criar_imagem("bus.png", 10, 10);
+    r2: criar_imagem("amarelo.png", 200, 10);
+    r3: criar_imagem("moto.png", 350, 10);
+    r4: criar_imagem("branco.png", 460, 10);
+    r5: criar_imagem("mycar.png", 270, 400);
+    r6: criar_imagem("pista.png", 0, 0);
+    delta: 1;
+    setWhile: 10;
+    i:0;
+    enquanto(setWhile>=1) {
+        esperar(15);
+        mover(r1,0,delta);
+        mover(r2,0,delta);
+        mover(r3,0,delta);
+        mover(r4,0,delta);
+        mover(r6,0,0);
+        lerT : consultar();
+
+        se (lerT = 1) {
+            mover(r5,0,-10);
+        }
+        se (lerT = 2) {
+            mover(r5,0,10);
+        }
+        se (lerT = 3) {
+            mover(r5,-10,0);
+        }
+        se (lerT = 4) {
+            mover(r5,10,0);
+        }
+        c : colidiu(r1,r5);
+        se (c) {
+            mostrar("End Game");
+            setWhile:0;
+        }
+        c : colidiu(r2,r5);
+        se (c) {
+            mostrar("End Game");
+            setWhile:0;
+
+        }
+        c : colidiu(r3,r5);
+        se (c) {
+            mostrar("End Game");
+            setWhile:0;
+
+        }
+        c : colidiu(r4,r5);
+        se (c) {
+            mostrar("End Game");
+            setWhile:0;
+
+        }
+
+        i:i+1;
+        se(i>=500){
+                        mover(r1, -10, -i);
+            mover(r2, -200, -i);
+            mover(r3, -350, -i);
+            mover(r4, -460, -i);
+            mover(r1, aleatorio(10,170) , -i);
+            mover(r2, aleatorio(190,330) , -i);
+            mover(r3, aleatorio(350,430) , -i);
+            mover(r4, aleatorio(460,490) , -i);
+            i:0;
+            setWhile:setWhile - 1;
+
+        }
+    }
+
+}

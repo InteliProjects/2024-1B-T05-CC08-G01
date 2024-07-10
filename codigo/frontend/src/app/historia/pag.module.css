@@ -1,0 +1,12 @@
+/* src/app/historia/page.module.css */
+.title {
+  font-size: 72px;
+  color: #DFC566;
+  font-family: 'Archivo', sans-serif;
+  font-weight: bold;
+  text-shadow: 
+    -1px -1px 0 #000,  
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000; 
+}
